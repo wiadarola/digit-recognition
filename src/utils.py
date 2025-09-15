@@ -1,29 +1,20 @@
 import numpy as np
 from numpy.typing import NDArray
+import torch
 
 
-def categorical_cross_entropy(y: NDArray, y_hat: NDArray) -> float:
-    eps = 1e-15
-    return -np.sum(y * np.log(y_hat + eps))
+def categorical_cross_entropy(y: torch.Tensor, y_hat: torch.Tensor) -> float:
+    return -np.log(y_hat + 1e-15)[y]
 
 
-def relu(z: NDArray) -> NDArray:
-    return np.maximum(0, z)
+def sigmoid(z: torch.Tensor) -> torch.Tensor:
+    return 1 / (1 + torch.exp(-z))
 
 
-def relu_dz(z: NDArray) -> NDArray:
-    raise NotImplementedError()
-
-
-def sigmoid(z: NDArray) -> NDArray:
-    return 1 / (1 + np.exp(-z))
-
-
-def sigmoid_dz(z: NDArray) -> NDArray:
+def sigmoid_dz(z: torch.Tensor) -> torch.Tensor:
     return sigmoid(z) * (1 - sigmoid(z))
 
 
-def softmax(z: NDArray) -> NDArray:
-    z = z - np.max(z)
-    e = np.exp(z)
-    return e / e.sum()
+def softmax(z: torch.Tensor) -> torch.Tensor:
+    exp_z = np.exp(z - z.max())
+    return exp_z / exp_z.sum()

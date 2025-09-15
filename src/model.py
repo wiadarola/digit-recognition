@@ -1,22 +1,21 @@
 import numpy as np
-from numpy.typing import NDArray
+import torch
 
 from src import utils
 
 
 class TenDigitMLP:
-    def __init__(self, lr: float = 1e-3):
+    def __init__(self, D: int = 28 * 28, H1: int = 256, H2: int = 64, C: int = 10, lr: float = 1e-3):
         self.lr = lr
-        input_size = 28 * 28
-        output_size = 10
-        self.w1 = np.random.uniform(-0.05, 0.05, (input_size, 128))
-        self.b1 = np.random.uniform(-0.05, 0.05, 128)
-        self.w2 = np.random.uniform(-0.05, 0.05, (128, 64))
-        self.b2 = np.random.uniform(-0.05, 0.05, 64)
-        self.w3 = np.random.uniform(-0.05, 0.05, (64, output_size))
-        self.b3 = np.random.uniform(-0.05, 0.05, output_size)
+        self.w1 = torch.rand((D, H1))
+        self.b1 = torch.zeros(H1)
+        self.w2 = torch.rand((H1, H2))
+        self.b2 = torch.zeros(H2)
+        self.w3 = torch.rand(H2, C)
+        self.b3 = torch.zeros(C)
 
-    def forward(self, x: NDArray) -> dict[str, NDArray]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        x = x.flatten()
         z1 = x @ self.w1 + self.b1
         a1 = utils.sigmoid(z1)
         z2 = a1 @ self.w2 + self.b2
@@ -30,33 +29,33 @@ class TenDigitMLP:
             "z2": z2,
             "a2": a2,
             "z3": z3,
-            "y_hat": y_hat,
         }
-        return cache
+        return y_hat, cache
 
-    def backward(self, cache: dict[str, NDArray], y: NDArray):
-        da3_dz3 = utils.softmax(cache["z3"]) - y
-        dz3_da2 = self.w3
-        da2_dz2 = utils.sigmoid_dz(cache["z2"])
-        dz2_da1 = self.w2
-        da1_dz1 = utils.sigmoid_dz(cache["z1"])
+    def backward(self, cache: dict[str, torch.Tensor], y: torch.Tensor):
+        x, z1, a1, z2, a2, z3 = cache.values()
 
-        # Output Layer
-        delta3 = da3_dz3
-        dL_dw3 = cache["a2"].T @ delta3
-        dL_db3 = delta3
+        # Output gradient
+        dL_dz3 = utils.softmax(z3) - y                      # (C,)
 
-        # Hidden layer
-        delta2 = delta3 @ dz3_da2 * da2_dz2
-        dL_dw2 = cache["a1"].T @ delta2
-        dL_db2 = delta2
+        # Backprop through linear layers: use weight transposes
+        dL_da2 = dL_dz3 @ self.w3.T                         # (H2,)
+        dL_dz2 = dL_da2 * utils.sigmoid_dz(z2)              # (H2,)
 
-        # Input layer
-        delta1 = delta2 @ dz2_da1 * da1_dz1
-        dL_dw1 = cache["x"] @ delta1
-        dL_db1 = delta1
+        dL_da1 = dL_dz2 @ self.w2.T                         # (H1,)
+        dL_dz1 = dL_da1 * utils.sigmoid_dz(z1)              # (H1,)
 
-        # Gradient Descent step
+        # Weight grads are outer products (single sample)
+        dL_dw3 = np.outer(a2, dL_dz3)                       # (H2, C)
+        dL_db3 = dL_dz3                                     # (C,)
+
+        dL_dw2 = np.outer(a1, dL_dz2)                       # (H1, H2)
+        dL_db2 = dL_dz2                                     # (H2,)
+
+        dL_dw1 = np.outer(x, dL_dz1)                        # (D, H1)
+        dL_db1 = dL_dz1                                     # (H1,)
+
+        # Gradient step
         self.w1 -= self.lr * dL_dw1
         self.b1 -= self.lr * dL_db1
         self.w2 -= self.lr * dL_dw2
