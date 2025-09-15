@@ -1,8 +1,8 @@
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST
 from torchvision.transforms import ToTensor
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from src.model import TenDigitMLP
@@ -23,17 +23,15 @@ def main():
 
 def train_one_step(model: TenDigitMLP, sample: list[torch.Tensor]):
     x, y = sample
-    y_hat, cache = model.forward(x)
+    y_hat = model.forward(x)
     loss = categorical_cross_entropy(y, y_hat)
-    model.backward(cache, y)
+    model.backward(x, y)
     return loss
 
 
 def get_data():
-    train_data = MNIST(
-        "data/", train=True, download=True, transform=ToTensor())
-    test_data = MNIST(
-        "data/", train=False, download=True, transform=ToTensor())
+    train_data = MNIST("data/", train=True, download=True, transform=ToTensor())
+    test_data = MNIST("data/", train=False, download=True, transform=ToTensor())
 
     train_dataloader = DataLoader(train_data, shuffle=True)
     test_dataloader = DataLoader(test_data, shuffle=True)

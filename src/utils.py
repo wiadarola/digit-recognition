@@ -1,6 +1,6 @@
 import numpy as np
-from numpy.typing import NDArray
 import torch
+from numpy.typing import NDArray
 
 
 def categorical_cross_entropy(y: torch.Tensor, y_hat: torch.Tensor) -> float:
