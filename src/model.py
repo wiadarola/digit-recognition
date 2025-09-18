@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 from src import utils
@@ -7,19 +6,20 @@ from src import utils
 class TenDigitMLP:
     def __init__(
         self,
-        D: int = 28 * 28,
-        H1: int = 256,
-        H2: int = 64,
-        C: int = 10,
-        lr: float = 1e-3,
+        input_dim: int = 28 * 28,
+        hidden_dim_1: int = 256,
+        hidden_dim_2: int = 64,
+        output_dim: int = 10,
+        learning_rate: float = 1e-3,
     ):
-        self.lr = lr
-        self.w1 = torch.rand((D, H1))
-        self.b1 = torch.zeros(H1)
-        self.w2 = torch.rand((H1, H2))
-        self.b2 = torch.zeros(H2)
-        self.w3 = torch.rand(H2, C)
-        self.b3 = torch.zeros(C)
+        self.lr = learning_rate
+        self.w1 = torch.rand((input_dim, hidden_dim_1))
+        self.b1 = torch.zeros(hidden_dim_1)
+        self.w2 = torch.rand((hidden_dim_1, hidden_dim_2))
+        self.b2 = torch.zeros(hidden_dim_2)
+        self.w3 = torch.rand(hidden_dim_2, output_dim)
+        self.b3 = torch.zeros(output_dim)
+        self.cache: dict[str, torch.Tensor]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.flatten()
@@ -40,7 +40,7 @@ class TenDigitMLP:
         # Output gradient
         dL_dz3 = utils.softmax(z3) - y  # (C,)
 
-        # Backprop
+        # Back propagate
         dL_da2 = dL_dz3 @ self.w3.T  # (H2,)
         dL_dz2 = dL_da2 * utils.sigmoid_dz(z2)  # (H2,)
 
@@ -48,13 +48,13 @@ class TenDigitMLP:
         dL_dz1 = dL_da1 * utils.sigmoid_dz(z1)  # (H1,)
 
         # Weight gradients
-        dL_dw3 = np.outer(a2, dL_dz3)  # (H2, C)
+        dL_dw3 = torch.outer(a2, dL_dz3)  # (H2, C)
         dL_db3 = dL_dz3  # (C,)
 
-        dL_dw2 = np.outer(a1, dL_dz2)  # (H1, H2)
+        dL_dw2 = torch.outer(a1, dL_dz2)  # (H1, H2)
         dL_db2 = dL_dz2  # (H2,)
 
-        dL_dw1 = np.outer(x, dL_dz1)  # (D, H1)
+        dL_dw1 = torch.outer(x, dL_dz1)  # (D, H1)
         dL_db1 = dL_dz1  # (H1,)
 
         # Gradient step
