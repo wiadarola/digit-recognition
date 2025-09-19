@@ -35,6 +35,7 @@ class TenDigitMLP:
         return y_hat
 
     def backward(self, x: torch.Tensor, y: torch.Tensor):
+        x = x.flatten()
         z1, a1, z2, a2, z3 = self.cache.values()
 
         # Output gradient
@@ -47,7 +48,7 @@ class TenDigitMLP:
         dL_da1 = dL_dz2 @ self.w2.T  # (H1,)
         dL_dz1 = dL_da1 * utils.sigmoid_dz(z1)  # (H1,)
 
-        # Weight gradients
+        # Parameter gradients
         dL_dw3 = torch.outer(a2, dL_dz3)  # (H2, C)
         dL_db3 = dL_dz3  # (C,)
 
