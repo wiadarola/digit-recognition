@@ -38,10 +38,8 @@ class TenDigitMLP:
         x = x.flatten()
         z1, a1, z2, a2, z3 = self.cache.values()
 
-        # Output gradient
         dL_dz3 = utils.softmax(z3) - y  # (C,)
 
-        # Back propagate
         dL_da2 = dL_dz3 @ self.w3.T  # (H2,)
         dL_dz2 = dL_da2 * utils.sigmoid_dz(z2)  # (H2,)
 
