@@ -1,3 +1,2 @@
-# digit-recognition
-
-Deep Big Simple Neural Nets Excel on Hand-written Digit Recognition
+# Digit Recognition MLP
+Imeplementation of an MLP from scratch to classify the MNIST dataset using SGD
