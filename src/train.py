@@ -8,10 +8,6 @@ from tqdm import tqdm
 from src.model import TenDigitMLP
 from src.utils import categorical_cross_entropy
 
-# TODO: K-fold cross validation
-# TODO: Implement batch size
-# TODO: Implement stochastic gradient descent
-
 
 def main():
     model = TenDigitMLP()
