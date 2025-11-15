@@ -1,5 +1,6 @@
 import torch
 from torch import Tensor
+import torch.nn.functional as F
 
 from src import derivatives as d
 
@@ -23,7 +24,7 @@ class TenDigitMLP:
         self.cache: dict[str, Tensor]
 
     def forward(self, x: Tensor) -> Tensor:
-        x = x.flatten()
+        x = x.flatten(1)
         z1 = x @ self.w1 + self.b1
         a1 = d.sigmoid(z1)
         z2 = a1 @ self.w2 + self.b2
@@ -36,31 +37,33 @@ class TenDigitMLP:
         return y_hat
 
     def backward(self, x: Tensor, y: Tensor):
-        x = x.flatten()
+        x = x.flatten(1)
         z1, a1, z2, a2, z3 = self.cache.values()
 
-        dL_dz3 = d.softmax(z3) - y  # C 1
+        y_one_hot = F.one_hot(y, num_classes=10)
 
-        dL_da2 = dL_dz3 @ self.w3.T  # H2 1
-        dL_dz2 = dL_da2 * d.sigmoid_dz(z2)  # H2 1
+        dL_dz3 = d.softmax(z3) - y_one_hot  # C 1
 
-        dL_da1 = dL_dz2 @ self.w2.T  # H1 1
+        dL_da2 = dL_dz3 @ self.w3.T  # b H2
+        dL_dz2 = dL_da2 * d.sigmoid_dz(z2)  # b H2
+
+        dL_da1 = dL_dz2 @ self.w2.T  # b H1
         dL_dz1 = dL_da1 * d.sigmoid_dz(z1)  # H1 1
 
         # Parameter gradients
-        dL_dw3 = torch.outer(a2, dL_dz3)  # H2 C
+        dL_dw3 = a2.unsqueeze(2) @ dL_dz3.unsqueeze(1)  # H2 C
         dL_db3 = dL_dz3  # C 1
 
-        dL_dw2 = torch.outer(a1, dL_dz2)  # H1 H2
+        dL_dw2 = a1.unsqueeze(2) @ dL_dz2.unsqueeze(1)  # H1 H2
         dL_db2 = dL_dz2  # H2
 
-        dL_dw1 = torch.outer(x, dL_dz1)  # D H1
+        dL_dw1 = x.unsqueeze(2) @ dL_dz1.unsqueeze(1)  # D H1
         dL_db1 = dL_dz1  # H1 1
 
         # Gradient step
-        self.w1 = self.w1 - self.lr * dL_dw1
-        self.b1 = self.b1 - self.lr * dL_db1
-        self.w2 = self.w2 - self.lr * dL_dw2
-        self.b2 = self.b2 - self.lr * dL_db2
-        self.w3 = self.w3 - self.lr * dL_dw3
-        self.b3 = self.b3 - self.lr * dL_db3
+        self.w1 = self.w1 - self.lr * dL_dw1.mean(0)
+        self.b1 = self.b1 - self.lr * dL_db1.mean(0)
+        self.w2 = self.w2 - self.lr * dL_dw2.mean(0)
+        self.b2 = self.b2 - self.lr * dL_db2.mean(0)
+        self.w3 = self.w3 - self.lr * dL_dw3.mean(0)
+        self.b3 = self.b3 - self.lr * dL_db3.mean(0)

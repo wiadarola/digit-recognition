@@ -3,7 +3,7 @@ from torch import Tensor
 
 
 def categorical_cross_entropy(y: Tensor, y_hat: Tensor) -> Tensor:
-    return -torch.log(y_hat + 1e-15)[y]
+    return -torch.log(y_hat + 1e-15)[:,y]
 
 
 def sigmoid(z: Tensor) -> Tensor:
